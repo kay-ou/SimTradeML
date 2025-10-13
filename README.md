@@ -17,18 +17,6 @@ SimTradeML provides reusable ML pipelines and model services tailored for financ
 
 ## 🧩 Architecture Overview
 
-```
-simtradeML/
-├── forecast_engine/      # ML models: ARIMA, Prophet, LSTM, XGBoost, etc.
-├── model_api/            # FastAPI endpoints for model inference
-├── data_ingest/          # ETL pipelines consuming SimTradeData outputs
-├── infra/                # AWS CDK / Terraform templates for deployment
-├── ci_pipeline/          # GitLab CI/CD scripts
-├── notebooks/            # Exploratory analysis and prototyping
-├── tests/                # Unit and integration tests
-└── README.md
-```
-
 ---
 
 ## 🔗 Ecosystem Integration
@@ -41,36 +29,6 @@ SimTradeML is designed to work seamlessly with other SimTrade modules:
 | SimTradeLab    | Consumes model outputs for strategies  | `.pkl` / `.h5` files or API |
 | Ptrade         | Embeds trained models in strategy code | Upload to research tab or call via script |
 
----
-
-## 🚀 Getting Started
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/ykayz/SimTradeML.git
-cd SimTradeML
-```
-
-### 2. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Train a sample model
-
-```bash
-python forecast_engine/train_xgboost.py
-```
-
-### 4. Launch model API
-
-```bash
-uvicorn model_api.main:app --reload
-```
-
----
 
 ## 🧠 Example Use Case
 
