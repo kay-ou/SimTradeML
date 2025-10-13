@@ -11,9 +11,11 @@ from simtrademl.training.trainer import (
     TrainingResult,
     Trainer,
 )
+from simtrademl.training.tuner import HyperparameterTuner
 
 __all__ = [
     "TrainingConfig",
     "TrainingResult",
     "Trainer",
+    "HyperparameterTuner",
 ]

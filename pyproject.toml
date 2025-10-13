@@ -61,6 +61,7 @@ tenacity = "^8.2.3"
 scipy = "^1.11.0"
 psycopg2-binary = "^2.9.11"
 redis = "^6.4.0"
+optuna = "^4.5.0"
 
 [tool.poetry.group.dev.dependencies]
 # Code quality
