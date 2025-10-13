@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from config.settings import get_settings
+from simtrademl.api.rate_limiter import RateLimiter
 from simtrademl.api.routers import management, predict
 from simtrademl.utils.logging import get_logger, trace_id_var
 
@@ -60,6 +61,13 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# Add rate limiter middleware (after CORS, before logging)
+app.add_middleware(
+    RateLimiter,
+    requests_per_minute=settings.rate_limit_requests_per_minute,
+    burst_size=settings.rate_limit_burst_size,
 )
 
 # Include routers

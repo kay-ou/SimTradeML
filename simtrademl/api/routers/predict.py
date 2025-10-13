@@ -8,8 +8,9 @@ from typing import Dict, List
 
 import numpy as np
 import pandas as pd
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from simtrademl.api.auth import get_api_key_dependency
 from simtrademl.api.model_loader import get_model_loader
 from simtrademl.api.schemas import (
     BatchPredictionRequest,
@@ -43,6 +44,7 @@ def _prepare_features(features: Dict[str, any]) -> pd.DataFrame:
     status_code=status.HTTP_200_OK,
     summary="Make a single prediction",
     description="Make a prediction using a specified model and feature values",
+    dependencies=[Depends(get_api_key_dependency())],
 )
 async def predict(request: PredictionRequest) -> PredictionResponse:
     """Make a single prediction.
@@ -133,6 +135,7 @@ async def predict(request: PredictionRequest) -> PredictionResponse:
     status_code=status.HTTP_200_OK,
     summary="Make batch predictions",
     description="Make predictions for multiple feature sets (max 1000)",
+    dependencies=[Depends(get_api_key_dependency())],
 )
 async def batch_predict(
     request: BatchPredictionRequest,

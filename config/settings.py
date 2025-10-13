@@ -6,7 +6,7 @@ environment variables and YAML files.
 
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -130,6 +130,22 @@ class Settings(BaseSettings):
         default=None,
         description="Secret key for API authentication",
     )
+    api_keys: list[str] = Field(
+        default_factory=list,
+        description='Valid API keys for authentication. Set API_KEYS env var as JSON array: \'["key1","key2"]\'',
+    )
+
+    # Rate Limiting
+    rate_limit_requests_per_minute: int = Field(
+        default=100,
+        description="Maximum requests per minute per API key",
+        ge=1,
+    )
+    rate_limit_burst_size: int = Field(
+        default=20,
+        description="Maximum burst size for rate limiting",
+        ge=1,
+    )
 
     # Logging
     log_level: LogLevel = Field(
@@ -157,7 +173,7 @@ class Settings(BaseSettings):
     )
     model_preload_list: list[str] = Field(
         default_factory=list,
-        description="Models to preload on startup. Format: JSON array ['model_name:version'] or comma-separated for validator",
+        description='Models to preload on startup. Set MODEL_PRELOAD_LIST env var as JSON array: \'["model1:v1","model2:v2"]\'',
     )
     default_model_version: str = Field(
         default="latest",
@@ -258,26 +274,6 @@ class Settings(BaseSettings):
         if v < 1:
             raise ValueError("model_cache_size must be >= 1")
         return v
-
-    @field_validator("model_preload_list", mode="before")
-    @classmethod
-    def parse_preload_list(cls, v: str | list[str] | None) -> list[str]:
-        """Parse model preload list from comma-separated string or list.
-
-        Args:
-            v: Comma-separated string (e.g., "model1:v1,model2:v2") or list
-
-        Returns:
-            List of model specifications
-        """
-        if v is None:
-            return []
-        if isinstance(v, str):
-            # Parse comma-separated string
-            if not v.strip():
-                return []
-            return [item.strip() for item in v.split(",") if item.strip()]
-        return list(v)
 
     @field_validator("training_default_test_ratio")
     @classmethod
