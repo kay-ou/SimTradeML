@@ -150,6 +150,15 @@ class Settings(BaseSettings):
         default=Path("/tmp/simtrademl/models"),
         description="Directory for model cache",
     )
+    model_cache_size: int = Field(
+        default=10,
+        description="Model LRU cache size (number of models to keep in memory)",
+        ge=1,
+    )
+    model_preload_list: list[str] = Field(
+        default_factory=list,
+        description="Models to preload on startup. Format: JSON array ['model_name:version'] or comma-separated for validator",
+    )
     default_model_version: str = Field(
         default="latest",
         description="Default model version to use",
@@ -241,6 +250,34 @@ class Settings(BaseSettings):
         cache_path = Path(v)
         cache_path.mkdir(parents=True, exist_ok=True)
         return cache_path
+
+    @field_validator("model_cache_size")
+    @classmethod
+    def validate_cache_size(cls, v: int) -> int:
+        """Validate cache size is positive."""
+        if v < 1:
+            raise ValueError("model_cache_size must be >= 1")
+        return v
+
+    @field_validator("model_preload_list", mode="before")
+    @classmethod
+    def parse_preload_list(cls, v: str | list[str] | None) -> list[str]:
+        """Parse model preload list from comma-separated string or list.
+
+        Args:
+            v: Comma-separated string (e.g., "model1:v1,model2:v2") or list
+
+        Returns:
+            List of model specifications
+        """
+        if v is None:
+            return []
+        if isinstance(v, str):
+            # Parse comma-separated string
+            if not v.strip():
+                return []
+            return [item.strip() for item in v.split(",") if item.strip()]
+        return list(v)
 
     @field_validator("training_default_test_ratio")
     @classmethod
