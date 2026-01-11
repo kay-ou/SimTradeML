@@ -20,7 +20,7 @@ xgboost = "0.90"
 scikit-learn = ">=1.0.0"
 
 # SimTradeLab (optional but recommended)
-simtradelab = {version = "^1.2.0", optional = true}
+simtradelab = {version = "^2.0.0", optional = true}
 
 # Optional: Training tools
 optuna = {version = "^4.5.0", optional = true}

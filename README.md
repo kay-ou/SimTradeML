@@ -1,185 +1,201 @@
 # SimTradeML
 
-**可复用的量化交易机器学习框架**
-
-SimTradeML 是一个设计简洁、易于扩展的机器学习训练框架，专为量化交易场景设计。无缝集成 [SimTradeLab](https://github.com/kay-ou/SimTradeLab)，直接读取本地 h5 数据文件进行模型训练。
-
-## 特性
-
-- 🎯 **解耦设计** - 数据、特征、模型各层独立
-- 🔌 **可插拔** - 支持多种数据源、特征、模型
-- 🚀 **开箱即用** - 集成SimTradeLab，复制h5文件即可训练
-- 📊 **完整评估** - IC/ICIR/分位收益/方向准确率
-- ⚡ **高性能** - 支持多进程并行采样
+量化交易机器学习框架，专为 A 股设计，无缝集成 [SimTradeLab](https://github.com/kay-ou/SimTradeLab)。
 
 ## 快速开始
 
 ### 安装
 
 ```bash
-# 克隆项目
-cd /home/kay/dev/SimTradeML
-
-# 安装依赖（包含SimTradeLab）
+cd /path/to/SimTradeML
 poetry install
-pip install simtradelab
-
-# 或者使用extras
-poetry install -E simtradelab
+pip install simtradelab  # 如果需要使用 SimTradeLab 数据源
 ```
 
-### 准备数据
-
-将 SimTradeLab 的 h5 数据文件复制到 `data/` 目录：
+### 5分钟训练第一个模型
 
 ```bash
-data/
-├── ptrade_data.h5           # 价格数据
-└── ptrade_fundamentals.h5   # 基本面数据
-```
+# 1. 准备数据（复制 SimTradeLab 的 h5 文件到 data/ 目录）
+mkdir -p data
+cp /path/to/ptrade_data.h5 data/
+cp /path/to/ptrade_fundamentals.h5 data/
 
-### 运行MVP训练
-
-```bash
+# 2. 运行训练
 poetry run python examples/mvp_train.py
 ```
+
+### 基础用法
+
+```python
+from simtrademl import Config, setup_logger
+from simtrademl.data_sources import SimTradeLabDataSource
+from simtrademl.core.data.collector import DataCollector
+
+# 1. 配置
+config = Config.from_dict({
+    'data': {'lookback_days': 60, 'predict_days': 5},
+    'training': {'parallel_jobs': 4}
+})
+
+# 2. 数据源
+data_source = SimTradeLabDataSource()  # 自动读取 data/ 目录
+
+# 3. 收集训练数据
+collector = DataCollector(data_source, config)
+X, y, dates = collector.collect()
+
+# 4. 训练模型（参考 examples/mvp_train.py）
+```
+
+## 核心特性
+
+- **数据源抽象**: 轻松切换不同数据源
+- **特征工程**: 内置技术指标，支持自定义
+- **评估指标**: IC/ICIR/分位收益/方向准确率
+- **并行处理**: 自动多进程采样加速
 
 ## 项目结构
 
 ```
-SimTradeML/
-├── src/simtrademl/
-│   ├── core/                    # 核心框架
-│   │   ├── data/               # 数据抽象层
-│   │   │   ├── base.py        # DataSource基类
-│   │   │   └── collector.py   # 数据收集器
-│   │   └── utils/              # 工具模块
-│   │       ├── config.py      # 配置管理
-│   │       ├── logger.py      # 日志系统
-│   │       └── metrics.py     # 评估指标
-│   │
-│   └── data_sources/           # 数据源实现
-│       └── simtradelab_source.py  # SimTradeLab数据源
-│
-├── examples/
-│   ├── mvp_train.py           # MVP训练脚本
-│   └── README_MVP.md          # MVP使用说明
-│
-├── pyproject.toml
-└── README.md
+src/simtrademl/
+├── core/
+│   ├── data/          # 数据层（DataSource, DataCollector）
+│   └── utils/         # 工具（Config, Logger, Metrics）
+└── data_sources/      # 数据源实现
+    └── simtradelab_source.py
+
+examples/
+└── mvp_train.py       # 完整训练示例
 ```
 
-## MVP版本
+## API 文档
 
-当前实现的是最小可用版本（MVP），包含：
-
-✅ **核心功能：**
-- SimTradeLab 数据源集成
-- 简单技术指标特征（11个）
-- XGBoost 模型训练
-- 时间序列分割（70/15/15）
-- IC/Rank IC/分位收益评估
-
-🚧 **后续扩展：**
-- 特征工程框架（Feature注册、自定义特征）
-- 特征选择（相关性、IC筛选、VIF）
-- 多模型支持（LightGBM、CatBoost）
-- 超参数优化（Optuna）
-- 完整Pipeline
-
-## 使用示例
-
-### 基础用法（MVP）
+### 配置管理
 
 ```python
-from simtrademl.data_sources.simtradelab_source import SimTradeLabDataSource
+from simtrademl import Config
 
-# 1. 初始化数据源
-data_source = SimTradeLabDataSource()
+# 从字典创建
+config = Config.from_dict({'data': {'lookback_days': 60}})
 
-# 2. 获取数据
-stocks = data_source.get_stock_list()
-price_df = data_source.get_price_data('600519.SS')
+# 从 YAML 加载
+config = Config.from_yaml('config.yml')
 
-# 3. 训练模型（见 examples/mvp_train.py）
+# 点号访问
+lookback = config.get('data.lookback_days', default=30)
+config.set('model.type', 'xgboost')
 ```
 
-### 配置系统
+### 数据收集
 
 ```python
-from simtrademl.core.utils.config import Config
+from simtrademl.core.data.collector import DataCollector
 
-# 从dict创建配置
-config = Config.from_dict({
-    'data': {
-        'lookback_days': 60,
-        'predict_days': 5,
-    },
-    'model': {
-        'type': 'xgboost',
-        'params': {'max_depth': 4},
-    }
-})
+collector = DataCollector(data_source, config)
 
-# 访问配置（支持点号语法）
-lookback = config.get('data.lookback_days')  # 60
+# 收集所有股票
+X, y, dates = collector.collect()
+
+# 过滤股票
+X, y, dates = collector.collect(
+    stock_filter=lambda s: s.startswith('60')
+)
+
+# 自定义特征
+def custom_features(stock, price_df, idx, date, ds):
+    return {'my_feature': price_df['close'].iloc[idx-1]}
+
+collector = DataCollector(data_source, config,
+                          feature_calculator=custom_features)
 ```
 
-## 评估指标
+### 评估指标
 
-SimTradeML 提供完整的量化评估指标：
+```python
+from simtrademl import (
+    calculate_ic, calculate_rank_ic, calculate_icir,
+    calculate_quantile_returns, calculate_direction_accuracy
+)
 
-- **IC (Information Coefficient)** - 预测值与实际收益的相关性
-- **Rank IC** - 排序相关性（Spearman）
-- **ICIR** - IC信息比率（IC均值/IC标准差）
-- **分位收益** - 按预测值分组的收益（每日再平衡）
-- **方向准确率** - 预测方向正确的比例
+# IC 指标
+ic, p_value = calculate_ic(predictions, actuals)
+rank_ic, p_value = calculate_rank_ic(predictions, actuals)
+icir, ic_std = calculate_icir(predictions, actuals)
+
+# 分位收益（日度再平衡）
+quantile_returns, long_short = calculate_quantile_returns(
+    predictions, actuals, dates=sample_dates
+)
+
+# 方向准确率
+accuracy = calculate_direction_accuracy(predictions, actuals)
+```
+
+## 测试
+
+```bash
+# 运行所有测试
+poetry run pytest
+
+# 查看覆盖率
+poetry run pytest --cov=simtrademl --cov-report=html
+open htmlcov/index.html
+```
+
+## 配置示例
+
+完整配置（`config.yml`）:
+
+```yaml
+data:
+  lookback_days: 60
+  predict_days: 5
+  sampling_window_days: 15
+
+model:
+  type: xgboost
+  params:
+    max_depth: 4
+    learning_rate: 0.04
+    subsample: 0.7
+    colsample_bytree: 0.7
+
+training:
+  train_ratio: 0.70
+  val_ratio: 0.15
+  parallel_jobs: -1  # -1 = 使用所有 CPU
+```
+
+## 扩展数据源
+
+```python
+from simtrademl.core.data.base import DataSource
+
+class MyDataSource(DataSource):
+    def get_stock_list(self) -> List[str]:
+        return ['600519.SS', '000858.SZ']
+
+    def get_price_data(self, stock, start_date, end_date, fields):
+        # 返回 DataFrame，index 为日期
+        return pd.DataFrame({
+            'open': [...], 'high': [...], 'low': [...],
+            'close': [...], 'volume': [...]
+        })
+
+    # 实现其他必需方法...
+```
 
 ## 依赖
 
-核心依赖：
-- Python >= 3.9
-- numpy, pandas, scipy
-- scikit-learn
-- xgboost
-- pyyaml, tqdm
-
-可选依赖：
-- simtradelab - 数据集成
-- optuna - 超参数优化
-- mlflow - 实验追踪
-- tsfresh - 时间序列特征
+**核心**: Python 3.9+, numpy, pandas, scikit-learn, xgboost 0.90
+**可选**: simtradelab (数据), optuna (超参优化), mlflow (实验追踪)
 
 ## 开发计划
 
-### Phase 1: MVP ✅
-- [x] 核心配置系统
-- [x] 数据层抽象
-- [x] SimTradeLab集成
-- [x] 基础训练流程
-- [x] 评估指标
-
-### Phase 2: 特征工程 🚧
-- [ ] Feature基类和注册表
-- [ ] 预定义特征库（技术、基本面、市场）
-- [ ] 特征选择器（相关性、IC、VIF）
-- [ ] 自定义特征支持
-
-### Phase 3: Pipeline 🚧
-- [ ] TrainingPipeline
-- [ ] ModelEvaluator
-- [ ] CrossValidator
-- [ ] Model基类
-
-### Phase 4: 扩展功能 ⏳
-- [ ] 多模型支持
-- [ ] 超参数优化
-- [ ] MLflow集成
-- [ ] 更多数据源
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
+- [x] MVP: 数据收集 + XGBoost 训练
+- [ ] 特征工程框架
+- [ ] 多模型支持（LightGBM, CatBoost）
+- [ ] 超参数优化集成
 
 ## 许可证
 
@@ -187,4 +203,6 @@ MIT License
 
 ---
 
-**Note:** 当前为MVP版本，专注核心功能验证。根据测试结果决定后续扩展方向。
+**文档**: 参考 `examples/mvp_train.py` 获取完整示例
+**问题**: 提交 Issue 到 GitHub
+**测试覆盖率**: 88% | 66 个测试全部通过

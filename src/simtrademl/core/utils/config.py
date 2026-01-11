@@ -70,7 +70,7 @@ class Config:
             6
         """
         keys = key.split('.')
-        value = self._config
+        value: Any = self._config
 
         for k in keys:
             if isinstance(value, dict):
@@ -131,7 +131,7 @@ class Config:
     def _get_from_defaults(self, key: str, fallback: Any) -> Any:
         """Get value from defaults"""
         keys = key.split('.')
-        value = self._defaults
+        value: Any = self._defaults
 
         for k in keys:
             if isinstance(value, dict):

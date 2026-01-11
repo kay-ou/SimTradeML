@@ -8,6 +8,9 @@ from simtrademl.core.data.base import DataSource
 from typing import Dict, List, Optional, Any
 import pandas as pd
 import numpy as np
+import logging
+
+logger = logging.getLogger('simtrademl')
 
 
 class SimTradeLabDataSource(DataSource):
@@ -42,6 +45,11 @@ class SimTradeLabDataSource(DataSource):
         """
         if self._stock_cache is None:
             self._stock_cache = self.api.get_Ashares()
+
+        # Ensure we always return a list, never None
+        if self._stock_cache is None:
+            return []
+
         return self._stock_cache
 
     def get_trading_dates(
@@ -148,7 +156,9 @@ class SimTradeLabDataSource(DataSource):
             # Convert to dict
             return result.iloc[0].to_dict() if len(result) > 0 else None
 
-        except Exception:
+        except Exception as e:
+            # Log but don't crash - fundamental data may not be available for all stocks/dates
+            logger.debug(f"Failed to get fundamentals for {stock} at {date_str}: {e}")
             return None
 
     def get_market_data(
@@ -197,13 +207,14 @@ class SimTradeLabDataSource(DataSource):
 
             # Convert to numpy array
             if isinstance(hist, pd.Series):
-                return hist.values
+                return np.asarray(hist.values)
             elif isinstance(hist, np.ndarray):
                 return hist
             else:
                 return np.array(hist)
 
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Failed to get history for {stock} {field}: {e}")
             return np.array([])
 
     def supports_feature_type(self, feature_type: str) -> bool:

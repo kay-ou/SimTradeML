@@ -71,7 +71,7 @@ def calculate_icir(predictions: np.ndarray, actuals: np.ndarray, window_size: in
     """
     if len(predictions) < window_size:
         ic, _ = calculate_ic(predictions, actuals)
-        return ic, 0.0
+        return float(ic), 0.0
 
     ic_series = []
     for i in range(0, len(predictions), window_size):
@@ -93,7 +93,7 @@ def calculate_icir(predictions: np.ndarray, actuals: np.ndarray, window_size: in
     ic_std = np.std(ic_series, ddof=1)
     icir = ic_mean / ic_std if ic_std > 0 else 0.0
 
-    return icir, ic_std
+    return float(icir), float(ic_std)
 
 
 def calculate_quantile_returns(
@@ -118,7 +118,7 @@ def calculate_quantile_returns(
     if dates is not None and len(dates) > 0:
         # Daily rebalancing (more realistic)
         unique_dates = np.unique(dates)
-        daily_quantile_returns = [[] for _ in range(n_quantiles)]
+        daily_quantile_returns: List[List[float]] = [[] for _ in range(n_quantiles)]
 
         for date in unique_dates:
             date_mask = (dates == date)
@@ -136,11 +136,11 @@ def calculate_quantile_returns(
                 q_mask = (day_quantiles == q)
                 if np.sum(q_mask) > 0:
                     q_return = np.mean(day_actual[q_mask])
-                    daily_quantile_returns[q].append(q_return)
+                    daily_quantile_returns[q].append(float(q_return))
 
         # Average across days
-        quantile_returns = [
-            np.mean(returns) if returns else 0.0
+        quantile_returns: List[float] = [
+            float(np.mean(returns)) if returns else 0.0
             for returns in daily_quantile_returns
         ]
     else:
@@ -154,13 +154,13 @@ def calculate_quantile_returns(
             mask = (pred_quantiles == q)
             if np.sum(mask) > 0:
                 avg_return = np.mean(actuals[mask])
-                quantile_returns.append(avg_return)
+                quantile_returns.append(float(avg_return))
             else:
                 quantile_returns.append(0.0)
 
     long_short_return = quantile_returns[-1] - quantile_returns[0] if len(quantile_returns) >= 5 else 0.0
 
-    return quantile_returns, long_short_return
+    return quantile_returns, float(long_short_return)
 
 
 def calculate_direction_accuracy(predictions: np.ndarray, actuals: np.ndarray) -> float:
