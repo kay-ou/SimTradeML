@@ -19,6 +19,9 @@ import xgboost as xgb
 from sklearn.preprocessing import RobustScaler
 from scipy.stats import pearsonr, spearmanr
 import logging
+import json
+import pickle
+from datetime import datetime
 
 # Import our components
 from simtrademl.data_sources.simtradelab_source import SimTradeLabDataSource
@@ -161,11 +164,18 @@ def collect_samples(data_source, n_stocks=50, lookback=60, predict_days=5):
 
     logger.info(f"Collected {len(samples)} samples")
 
+    # Create DataFrame with fixed column order
     X = pd.DataFrame(samples)
+    # Sort columns alphabetically to ensure consistent order
+    X = X[sorted(X.columns)]
+    feature_names = list(X.columns)
+
     y = np.array(targets)
     sample_dates = pd.Series(dates)
 
-    return X, y, sample_dates
+    logger.info(f"Feature names (in order): {feature_names}")
+
+    return X, y, sample_dates, feature_names
 
 
 def train_xgboost(X, y, sample_dates):
@@ -177,7 +187,7 @@ def train_xgboost(X, y, sample_dates):
         sample_dates: Sample dates
 
     Returns:
-        trained model
+        (model, scaler) - trained model and fitted scaler
     """
     logger.info(f"\nTraining XGBoost model...")
     logger.info(f"Features: {X.shape[1]}, Samples: {X.shape[0]}")
@@ -248,7 +258,7 @@ def train_xgboost(X, y, sample_dates):
     logger.info("="*60)
     evaluate(model, dtest, y_test, sample_dates[test_mask].values)
 
-    return model
+    return model, scaler
 
 
 def evaluate(model, dmatrix, y_true, dates=None):
@@ -326,16 +336,49 @@ def main():
 
     # 2. Collect samples
     logger.info("\n2. Collecting training samples...")
-    X, y, sample_dates = collect_samples(data_source, n_stocks=100)
+    X, y, sample_dates, feature_names = collect_samples(data_source, n_stocks=100)
 
     # 3. Train model
     logger.info("\n3. Training model...")
-    model = train_xgboost(X, y, sample_dates)
+    model, scaler = train_xgboost(X, y, sample_dates)
 
-    # 4. Save model
-    logger.info("\n4. Saving model...")
+    # 4. Save model and metadata
+    logger.info("\n4. Saving model and metadata...")
+
+    # Save model (JSON format)
     model.save_model('examples/mvp_model.json')
-    logger.info("Model saved to examples/mvp_model.json")
+    logger.info("✓ Model saved to examples/mvp_model.json")
+
+    # Save scaler (Pickle format)
+    with open('examples/mvp_scaler.pkl', 'wb') as f:
+        pickle.dump(scaler, f)
+    logger.info("✓ Scaler saved to examples/mvp_scaler.pkl")
+
+    # Save feature names
+    with open('examples/mvp_features.json', 'w') as f:
+        json.dump(feature_names, f, indent=2)
+    logger.info("✓ Feature names saved to examples/mvp_features.json")
+
+    # Save metadata
+    metadata = {
+        'model_id': f'mvp_{datetime.now().strftime("%Y%m%d_%H%M%S")}',
+        'version': '1.0',
+        'created_at': datetime.now().isoformat(),
+        'xgboost_version': xgb.__version__,
+        'features': feature_names,
+        'n_features': len(feature_names),
+        'scaler_type': 'RobustScaler',
+        'n_samples': len(y),
+        'files': {
+            'model': 'mvp_model.json',
+            'scaler': 'mvp_scaler.pkl',
+            'features': 'mvp_features.json'
+        }
+    }
+
+    with open('examples/mvp_metadata.json', 'w') as f:
+        json.dump(metadata, f, indent=2)
+    logger.info("✓ Metadata saved to examples/mvp_metadata.json")
 
     logger.info("\n" + "="*60)
     logger.info("Training completed!")
