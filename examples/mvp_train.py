@@ -10,15 +10,11 @@ This script demonstrates the most basic usage:
 4. Evaluate performance
 """
 
-import sys
-sys.path.insert(0, '/home/kay/dev/SimTradeML/src')
-
 import numpy as np
 import pandas as pd
 import xgboost as xgb
 from sklearn.preprocessing import RobustScaler
 from scipy.stats import pearsonr, spearmanr
-import logging
 import json
 import pickle
 from datetime import datetime
@@ -26,6 +22,7 @@ from datetime import datetime
 # Import our components
 from simtrademl.data_sources.simtradelab_source import SimTradeLabDataSource
 from simtrademl.core.utils.logger import setup_logger
+from simtrademl.core.models import ModelMetadata, create_model_id, PTradeModelExporter
 
 # Setup logger
 logger = setup_logger('mvp', level='INFO', log_file='examples/mvp_train.log')
@@ -345,40 +342,61 @@ def main():
     # 4. Save model and metadata
     logger.info("\n4. Saving model and metadata...")
 
-    # Save model (JSON format)
-    model.save_model('examples/mvp_model.json')
-    logger.info("✓ Model saved to examples/mvp_model.json")
+    # Create metadata using ModelMetadata class
+    metadata = ModelMetadata(
+        model_id=create_model_id(prefix='mvp'),
+        version='1.0',
+        created_at=datetime.now().isoformat(),
+        model_type='xgboost',
+        model_library_version=xgb.__version__,
+        features=feature_names,
+        n_features=len(feature_names),
+        scaler_type='RobustScaler',
+        n_samples=len(y)
+    )
 
-    # Save scaler (Pickle format)
+    # Add metrics to metadata
+    # (Would be calculated from validation set in real scenario)
+    # metadata.add_metric('ic', ic_value)
+    # metadata.add_metric('icir', icir_value)
+
+    # Export using PTradeModelExporter
+    exporter = PTradeModelExporter(output_dir='examples/mvp_model_package')
+    package_path = exporter.export(
+        model=model,
+        metadata=metadata,
+        scaler=scaler,
+        model_format='json',
+        overwrite=True
+    )
+
+    logger.info(f"✓ Model package exported to: {package_path}")
+    logger.info("  Files generated:")
+    logger.info("    - model.json (XGBoost model)")
+    logger.info("    - scaler.pkl (Feature scaler)")
+    logger.info("    - features.json (Feature names)")
+    logger.info("    - metadata.json (Complete metadata)")
+    logger.info("    - README.md (Usage documentation)")
+    logger.info("    - usage_example.py (Executable example)")
+
+    # Also save to examples/ for backward compatibility
+    logger.info("\n  Backward compatibility files:")
+    model.save_model('examples/mvp_model.json')
+    logger.info("    - mvp_model.json")
+
     with open('examples/mvp_scaler.pkl', 'wb') as f:
         pickle.dump(scaler, f)
-    logger.info("✓ Scaler saved to examples/mvp_scaler.pkl")
+    logger.info("    - mvp_scaler.pkl")
 
-    # Save feature names
     with open('examples/mvp_features.json', 'w') as f:
         json.dump(feature_names, f, indent=2)
-    logger.info("✓ Feature names saved to examples/mvp_features.json")
+    logger.info("    - mvp_features.json")
 
-    # Save metadata
-    metadata = {
-        'model_id': f'mvp_{datetime.now().strftime("%Y%m%d_%H%M%S")}',
-        'version': '1.0',
-        'created_at': datetime.now().isoformat(),
-        'xgboost_version': xgb.__version__,
-        'features': feature_names,
-        'n_features': len(feature_names),
-        'scaler_type': 'RobustScaler',
-        'n_samples': len(y),
-        'files': {
-            'model': 'mvp_model.json',
-            'scaler': 'mvp_scaler.pkl',
-            'features': 'mvp_features.json'
-        }
-    }
+    metadata.save('examples/mvp_metadata.json')
+    logger.info("    - mvp_metadata.json")
 
-    with open('examples/mvp_metadata.json', 'w') as f:
-        json.dump(metadata, f, indent=2)
-    logger.info("✓ Metadata saved to examples/mvp_metadata.json")
+    # Print metadata summary
+    logger.info("\n" + metadata.summary())
 
     logger.info("\n" + "="*60)
     logger.info("Training completed!")

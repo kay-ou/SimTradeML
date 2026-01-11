@@ -3,6 +3,13 @@
 Model management module for PTrade compatibility
 """
 
-from .metadata import ModelMetadata
+from .metadata import ModelMetadata, create_model_id
+from .exporter import PTradeModelExporter
+from .package import PTradeModelPackage
 
-__all__ = ['ModelMetadata']
+__all__ = [
+    'ModelMetadata',
+    'create_model_id',
+    'PTradeModelExporter',
+    'PTradeModelPackage'
+]

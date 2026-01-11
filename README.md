@@ -28,31 +28,28 @@ mkdir -p data
 cp /path/to/ptrade_data.h5 data/
 cp /path/to/ptrade_fundamentals.h5 data/
 
-# 2. 运行训练
+# 2. 运行完整训练流程
 poetry run python examples/mvp_train.py
 ```
 
-### 基础用法
+### 完整示例
+
+参考 `examples/` 目录：
+- **mvp_train.py** - 完整训练流程（数据收集、训练、导出）
+- **complete_example.py** - 推荐用法演示（单文件包）
+
+### 推荐用法（单文件包）
 
 ```python
-from simtrademl import Config, setup_logger
-from simtrademl.data_sources import SimTradeLabDataSource
-from simtrademl.core.data.collector import DataCollector
+from simtrademl.core.models import PTradeModelPackage
 
-# 1. 配置
-config = Config.from_dict({
-    'data': {'lookback_days': 60, 'predict_days': 5},
-    'training': {'parallel_jobs': 4}
-})
+# 训练后保存（一个文件包含所有）
+package = PTradeModelPackage(model=model, scaler=scaler, metadata=metadata)
+package.save('my_model.ptp')
 
-# 2. 数据源
-data_source = SimTradeLabDataSource()  # 自动读取 data/ 目录
-
-# 3. 收集训练数据
-collector = DataCollector(data_source, config)
-X, y, dates = collector.collect()
-
-# 4. 训练模型（参考 examples/mvp_train.py）
+# PTrade 中加载和预测
+package = PTradeModelPackage.load('my_model.ptp')
+prediction = package.predict(features_dict)  # 自动验证+缩放
 ```
 
 ## 核心特性
