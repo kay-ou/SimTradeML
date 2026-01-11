@@ -2,28 +2,21 @@
 """
 SimTradeML Complete Example
 
-This single file demonstrates:
-1. Training a model (full pipeline)
-2. Exporting model package (multi-file)
-3. Using single-file package (RECOMMENDED for PTrade)
-4. Loading and predicting (both methods)
+Demonstrates the complete workflow:
+1. Training a model
+2. Saving as single-file package
+3. Loading and making predictions
 
-Run sections independently or all together.
+See mvp_train.py for full training pipeline.
 """
 
-import numpy as np
-import pandas as pd
 import xgboost as xgb
-from sklearn.preprocessing import RobustScaler
-import pickle
 from datetime import datetime
 
-from simtrademl.data_sources.simtradelab_source import SimTradeLabDataSource
 from simtrademl.core.utils.logger import setup_logger
 from simtrademl.core.models import (
     ModelMetadata,
     create_model_id,
-    PTradeModelExporter,
     PTradeModelPackage
 )
 
@@ -46,9 +39,9 @@ def train_example():
     #              model, scaler = train_xgboost(X, y, dates)
 
     feature_names = [
-        'ma10', 'ma20', 'ma5', 'ma60', 'price_position',
-        'return_10d', 'return_1d', 'return_20d', 'return_5d',
-        'volatility_20d', 'volume_ratio'
+        'ma5', 'ma10', 'ma20', 'ma60',
+        'return_1d', 'return_5d', 'return_10d', 'return_20d',
+        'volatility_20d', 'volume_ratio', 'price_position'
     ]
 
     metadata = ModelMetadata(
@@ -67,71 +60,51 @@ def train_example():
 
 
 # ============================================================================
-# PART 2: SINGLE-FILE EXPORT (RECOMMENDED)
+# PART 2: SAVE MODEL
 # ============================================================================
 
-def export_single_file_example():
-    """Export as single-file package - RECOMMENDED for PTrade"""
+def save_example():
+    """Save model as single-file package"""
     logger.info("\n" + "="*60)
-    logger.info("PART 2: SINGLE-FILE EXPORT (RECOMMENDED)")
+    logger.info("PART 2: SAVE MODEL")
     logger.info("="*60)
 
     # Assume we have: model, scaler, metadata
     # package = PTradeModelPackage(model=model, scaler=scaler, metadata=metadata)
-    # package.save('examples/model.ptp')
+    # package.save('model.ptp')
 
-    logger.info("✓ Export to single file:")
+    logger.info("Save to single file:")
+    logger.info("  package = PTradeModelPackage(model, scaler, metadata)")
     logger.info("  package.save('model.ptp')")
-    logger.info("\n  ONE file contains:")
-    logger.info("    - XGBoost model")
-    logger.info("    - Feature scaler")
-    logger.info("    - Metadata (features, version, etc.)")
+    logger.info("\nONE file contains everything:")
+    logger.info("  - XGBoost model")
+    logger.info("  - Feature scaler")
+    logger.info("  - Complete metadata (features, version, etc.)")
 
 
 # ============================================================================
-# PART 3: SINGLE-FILE LOADING (RECOMMENDED)
+# PART 3: LOAD AND PREDICT
 # ============================================================================
 
-def predict_single_file_example():
-    """Load and predict using single file - RECOMMENDED"""
+def predict_example():
+    """Load and predict using single file"""
     logger.info("\n" + "="*60)
-    logger.info("PART 3: SINGLE-FILE LOADING (RECOMMENDED)")
+    logger.info("PART 3: LOAD AND PREDICT")
     logger.info("="*60)
 
     logger.info("Load from ONE file:")
     logger.info("  package = PTradeModelPackage.load('model.ptp')")
 
-    logger.info("\nPredict with ONE line:")
+    logger.info("\nSingle prediction:")
     logger.info("  prediction = package.predict(features_dict)")
 
-    logger.info("\n✓ Advantages:")
-    logger.info("  - ONE file to manage")
-    logger.info("  - Auto feature validation")
-    logger.info("  - Auto feature scaling")
-    logger.info("  - No manual ordering needed")
+    logger.info("\nBatch prediction:")
+    logger.info("  predictions = package.predict_batch(features_list)")
 
-
-# ============================================================================
-# PART 4: MULTI-FILE EXPORT (Alternative)
-# ============================================================================
-
-def export_multi_file_example():
-    """Export as multi-file package - for inspection"""
-    logger.info("\n" + "="*60)
-    logger.info("PART 4: MULTI-FILE EXPORT (Alternative)")
-    logger.info("="*60)
-
-    logger.info("For human inspection or debugging:")
-    logger.info("  exporter = PTradeModelExporter('model_package')")
-    logger.info("  exporter.export(model, metadata, scaler)")
-
-    logger.info("\n✓ Generates 6 files:")
-    logger.info("    - model.json (XGBoost)")
-    logger.info("    - scaler.pkl (Scaler)")
-    logger.info("    - features.json (Feature names)")
-    logger.info("    - metadata.json (Metadata)")
-    logger.info("    - README.md (Documentation)")
-    logger.info("    - usage_example.py (Example code)")
+    logger.info("\n✓ Features are automatically:")
+    logger.info("  - Validated (order and completeness)")
+    logger.info("  - Scaled (using saved scaler)")
+    logger.info("  - Fed to model in correct order")
 
 
 # ============================================================================
@@ -141,32 +114,28 @@ def export_multi_file_example():
 def main():
     """Run complete example"""
     print("\n" + "="*60)
-    print("SimTradeML Complete Example")
+    print("SimTradeML Usage Example")
     print("="*60)
     print("\nFor full training code, see: mvp_train.py")
-    print("This file shows the recommended usage patterns.")
     print("="*60)
 
     # Part 1: Training
     metadata = train_example()
 
-    # Part 2: Export (RECOMMENDED)
-    export_single_file_example()
+    # Part 2: Save
+    save_example()
 
-    # Part 3: Loading (RECOMMENDED)
-    predict_single_file_example()
-
-    # Part 4: Alternative (for inspection)
-    export_multi_file_example()
+    # Part 3: Load & Predict
+    predict_example()
 
     print("\n" + "="*60)
-    print("✓ Examples completed!")
+    print("✓ Example completed!")
     print("="*60)
-    print("\n📌 RECOMMENDATION for PTrade:")
-    print("   Use single-file package (.ptp format)")
-    print("\n   Training:  package.save('model.ptp')")
-    print("   Loading:   package = PTradeModelPackage.load('model.ptp')")
-    print("   Predict:   prediction = package.predict(features)")
+    print("\n📌 Quick Reference:")
+    print("   Save:    package.save('model.ptp')")
+    print("   Load:    package = PTradeModelPackage.load('model.ptp')")
+    print("   Predict: prediction = package.predict(features_dict)")
+    print("   Batch:   predictions = package.predict_batch(features_list)")
     print("="*60)
 
 

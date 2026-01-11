@@ -63,7 +63,18 @@ class PTradeModelPackage:
 
     @classmethod
     def load(cls, filepath: str) -> 'PTradeModelPackage':
-        """Load package from single file"""
+        """Load package from single .ptp file
+
+        Args:
+            filepath: Path to .ptp package file
+
+        Returns:
+            Loaded PTradeModelPackage
+
+        Raises:
+            FileNotFoundError: If file not found
+            ValueError: If file format invalid
+        """
         with open(filepath, 'rb') as f:
             package_data = pickle.load(f)
 
@@ -89,8 +100,92 @@ class PTradeModelPackage:
             metadata=metadata
         )
 
+    @classmethod
+    def load_from_files(
+        cls,
+        model_path: str,
+        metadata_path: Optional[str] = None,
+        scaler_path: Optional[str] = None
+    ) -> 'PTradeModelPackage':
+        """Load package from separate files (for backward compatibility)
+
+        Supports multiple model formats: .json, .model, .pkl
+
+        Args:
+            model_path: Path to model file (.json, .model, or .pkl)
+            metadata_path: Optional path to metadata.json
+            scaler_path: Optional path to scaler.pkl
+
+        Returns:
+            Loaded PTradeModelPackage
+
+        Raises:
+            FileNotFoundError: If model file not found
+            ValueError: If model format not supported
+
+        Example:
+            # Load from JSON model
+            package = PTradeModelPackage.load_from_files(
+                'model.json',
+                'metadata.json',
+                'scaler.pkl'
+            )
+
+            # Load from pickle model
+            package = PTradeModelPackage.load_from_files('model.pkl')
+        """
+        model_file = Path(model_path)
+
+        if not model_file.exists():
+            raise FileNotFoundError(f"Model file not found: {model_file}")
+
+        # Load model based on extension
+        model = None
+        suffix = model_file.suffix.lower()
+
+        if suffix in ['.json', '.model']:
+            # XGBoost native format
+            model = xgb.Booster(model_file=str(model_file))
+        elif suffix == '.pkl':
+            # Pickle format
+            with open(model_file, 'rb') as f:
+                model = pickle.load(f)
+        else:
+            raise ValueError(
+                f"Unsupported model format: {suffix}. "
+                f"Supported: .json, .model, .pkl"
+            )
+
+        # Load metadata if provided
+        metadata = None
+        if metadata_path:
+            metadata_file = Path(metadata_path)
+            if metadata_file.exists():
+                json_str = metadata_file.read_text()
+                metadata = ModelMetadata.from_json(json_str)
+
+        # Load scaler if provided
+        scaler = None
+        if scaler_path:
+            scaler_file = Path(scaler_path)
+            if scaler_file.exists():
+                with open(scaler_file, 'rb') as f:
+                    scaler = pickle.load(f)
+
+        return cls(model=model, scaler=scaler, metadata=metadata)
+
     def predict(self, features_dict: Dict[str, float]) -> float:
-        """Make prediction with feature validation"""
+        """Make prediction with feature validation
+
+        Args:
+            features_dict: Dictionary mapping feature names to values
+
+        Returns:
+            Predicted value
+
+        Raises:
+            ValueError: If model or metadata not loaded, or features invalid
+        """
         if self.model is None:
             raise ValueError("Model not loaded")
 
@@ -110,6 +205,51 @@ class PTradeModelPackage:
         # Predict
         dmatrix = xgb.DMatrix(X)
         return float(self.model.predict(dmatrix)[0])
+
+    def predict_batch(self, features_list: list[Dict[str, float]]) -> np.ndarray:
+        """Make batch predictions with feature validation
+
+        Args:
+            features_list: List of feature dictionaries
+
+        Returns:
+            Array of predictions
+
+        Raises:
+            ValueError: If model or metadata not loaded, or features invalid
+
+        Example:
+            features_list = [
+                {'ma5': 100.0, 'ma10': 99.5, 'rsi14': 60.0},
+                {'ma5': 101.0, 'ma10': 100.0, 'rsi14': 55.0}
+            ]
+            predictions = package.predict_batch(features_list)
+        """
+        if self.model is None:
+            raise ValueError("Model not loaded")
+
+        if self.metadata is None:
+            raise ValueError("Metadata not loaded")
+
+        if not features_list:
+            return np.array([])
+
+        # Validate first sample (assume all have same features)
+        self.metadata.validate_features(list(features_list[0].keys()))
+
+        # Construct feature matrix in correct order
+        X = np.array([
+            [features[name] for name in self.metadata.features]
+            for features in features_list
+        ])
+
+        # Apply scaler if available
+        if self.scaler is not None:
+            X = self.scaler.transform(X)
+
+        # Predict
+        dmatrix = xgb.DMatrix(X)
+        return self.model.predict(dmatrix)
 
     def summary(self) -> str:
         """Get package summary"""

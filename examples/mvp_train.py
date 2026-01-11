@@ -22,7 +22,7 @@ from datetime import datetime
 # Import our components
 from simtrademl.data_sources.simtradelab_source import SimTradeLabDataSource
 from simtrademl.core.utils.logger import setup_logger
-from simtrademl.core.models import ModelMetadata, create_model_id, PTradeModelExporter
+from simtrademl.core.models import ModelMetadata, create_model_id, PTradeModelPackage
 
 # Setup logger
 logger = setup_logger('mvp', level='INFO', log_file='examples/mvp_train.log')
@@ -360,27 +360,25 @@ def main():
     # metadata.add_metric('ic', ic_value)
     # metadata.add_metric('icir', icir_value)
 
-    # Export using PTradeModelExporter
-    exporter = PTradeModelExporter(output_dir='examples/mvp_model_package')
-    package_path = exporter.export(
-        model=model,
-        metadata=metadata,
-        scaler=scaler,
-        model_format='json',
-        overwrite=True
-    )
+    # Save using PTradeModelPackage (single-file, recommended)
+    logger.info("\n  Saving as single-file package (recommended)...")
+    package = PTradeModelPackage(model=model, scaler=scaler, metadata=metadata)
+    package_file = 'examples/mvp_model.ptp'
+    package.save(package_file)
 
-    logger.info(f"✓ Model package exported to: {package_path}")
-    logger.info("  Files generated:")
-    logger.info("    - model.json (XGBoost model)")
-    logger.info("    - scaler.pkl (Feature scaler)")
-    logger.info("    - features.json (Feature names)")
-    logger.info("    - metadata.json (Complete metadata)")
-    logger.info("    - README.md (Usage documentation)")
-    logger.info("    - usage_example.py (Executable example)")
+    logger.info(f"✓ Model package saved to: {package_file}")
+    logger.info("  This single file contains:")
+    logger.info("    - XGBoost model")
+    logger.info("    - Feature scaler")
+    logger.info("    - Complete metadata (features, version, etc.)")
+    logger.info("")
+    logger.info("  To load and use:")
+    logger.info("    from simtrademl.core.models import PTradeModelPackage")
+    logger.info(f"    package = PTradeModelPackage.load('{package_file}')")
+    logger.info("    prediction = package.predict(features_dict)")
 
-    # Also save to examples/ for backward compatibility
-    logger.info("\n  Backward compatibility files:")
+    # Also save individual files for backward compatibility
+    logger.info("\n  Backward compatibility files (optional):")
     model.save_model('examples/mvp_model.json')
     logger.info("    - mvp_model.json")
 
