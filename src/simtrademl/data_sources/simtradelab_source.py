@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 SimTradeLab data source implementation
-Reads data from local h5 files using SimTradeLab Research API
+Reads data from local parquet files using SimTradeLab Research API
 """
 
 from simtrademl.core.data.base import DataSource
@@ -16,8 +16,8 @@ logger = logging.getLogger('simtrademl')
 class SimTradeLabDataSource(DataSource):
     """Data source using SimTradeLab Research API
 
-    Reads data from local h5 files in data/ directory.
-    Simply copy ptrade_data.h5 and ptrade_fundamentals.h5 to data/ directory.
+    Reads data from local parquet files in data/ directory.
+    Copy SimTradeData parquet data directory to data/.
 
     Args:
         data_path: Path to data directory (default: auto-detect project root/data)

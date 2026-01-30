@@ -14,12 +14,11 @@ pip install simtradelab  # 安装 SimTradeLab
 
 ### 2. 准备数据
 
-将 h5 数据文件复制到 data 目录：
+将 SimTradeData 的 parquet 数据复制到 data 目录：
 
 ```bash
-# 确保 data 目录有这两个文件
-data/ptrade_data.h5
-data/ptrade_fundamentals.h5
+# 确保 data 目录包含 parquet 数据
+cp -r /path/to/SimTradeData/data/* data/
 ```
 
 ### 3. 运行MVP训练
@@ -30,7 +29,7 @@ poetry run python examples/mvp_train.py
 
 ## MVP功能
 
-- ✅ 使用 SimTradeLab Research API 读取本地 h5 数据
+- ✅ 使用 SimTradeLab Research API 读取本地 parquet 数据
 - ✅ 计算简单技术指标特征（MA、收益率、波动率等）
 - ✅ 时间序列分割（70% 训练，15% 验证，15% 测试）
 - ✅ XGBoost 模型训练

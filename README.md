@@ -23,10 +23,9 @@ pip install simtradelab  # 如果需要使用 SimTradeLab 数据源
 ### 5分钟训练第一个模型
 
 ```bash
-# 1. 准备数据（复制 SimTradeLab 的 h5 文件到 data/ 目录）
+# 1. 准备数据（复制 SimTradeData 的 parquet 数据到 data/ 目录）
 mkdir -p data
-cp /path/to/ptrade_data.h5 data/
-cp /path/to/ptrade_fundamentals.h5 data/
+cp -r /path/to/SimTradeData/data/* data/
 
 # 2. 运行完整训练流程
 poetry run python examples/mvp_train.py
